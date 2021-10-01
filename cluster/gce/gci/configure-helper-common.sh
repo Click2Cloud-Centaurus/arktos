@@ -2581,15 +2581,6 @@ function start-arktos-network-controller {
   sed -i -e "s@{{pillar\['kube_docker_registry'\]}}@${DOCKER_REGISTRY}@g" "${src_file}"
   sed -i -e "s@{{pillar\['arktos-network-controller_docker_tag'\]}}@${kube_rc_docker_tag}@g" "${src_file}"
   sed -i -e "s@{{params}}@${params}@g" "${src_file}"
-  sed -i -e "s@{{container_env}}@${container_env}@g" ${src_file}
-  sed -i -e "s@{{cloud_config_mount}}@${CLOUD_CONFIG_MOUNT}@g" "${src_file}"
-  sed -i -e "s@{{cloud_config_volume}}@${CLOUD_CONFIG_VOLUME}@g" "${src_file}"
-  sed -i -e "s@{{additional_cloud_config_mount}}@@g" "${src_file}"
-  sed -i -e "s@{{additional_cloud_config_volume}}@@g" "${src_file}"
-  sed -i -e "s@{{pv_recycler_mount}}@${PV_RECYCLER_MOUNT}@g" "${src_file}"
-  sed -i -e "s@{{pv_recycler_volume}}@${PV_RECYCLER_VOLUME}@g" "${src_file}"
-  sed -i -e "s@{{flexvolume_hostpath_mount}}@${FLEXVOLUME_HOSTPATH_MOUNT}@g" "${src_file}"
-  sed -i -e "s@{{flexvolume_hostpath}}@${FLEXVOLUME_HOSTPATH_VOLUME}@g" "${src_file}"
   sed -i -e "s@{{cpurequest}}@${ARKTOS_NETWORK_CONTROLLER_CPU_REQUEST}@g" "${src_file}"
 
   cp "${src_file}" /etc/kubernetes/manifests
