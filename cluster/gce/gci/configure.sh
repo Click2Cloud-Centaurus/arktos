@@ -557,6 +557,8 @@ function load-docker-images {
     try-load-docker-image "${img_dir}/kube-controller-manager.tar"
     try-load-docker-image "${img_dir}/kube-scheduler.tar"
     try-load-docker-image "${img_dir}/workload-controller-manager.tar"
+    try-load-docker-image "${img_dir}/arktos-network-controller.tar"
+
   else
     try-load-docker-image "${img_dir}/kube-proxy.tar"
   fi
@@ -595,6 +597,7 @@ function install-kube-binary-config {
       cp "${src_dir}/kube-controller-manager.tar" "${dst_dir}"
       cp "${src_dir}/kube-scheduler.tar" "${dst_dir}"
       cp "${src_dir}/workload-controller-manager.tar" "${dst_dir}"
+      cp "${src_dir}/arktos-network-controller.tar" "${dst_dir}"
       cp -r "${KUBE_HOME}/kubernetes/addons" "${dst_dir}"
     fi
     load-docker-images

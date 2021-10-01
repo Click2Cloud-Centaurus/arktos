@@ -608,6 +608,9 @@ function create-master-auth {
   if [[ -n "${KUBE_CLUSTER_AUTOSCALER_TOKEN:-}" ]]; then
     append_or_replace_prefixed_line "${known_tokens_csv}" "${KUBE_CLUSTER_AUTOSCALER_TOKEN}," "cluster-autoscaler,uid:cluster-autoscaler"
   fi
+  if [[ -n "${ARKTOS_NETWORK_CONTROLLER_TOKEN:-}" ]]; then
+    append_or_replace_prefixed_line "${known_tokens_csv}" "${ARKTOS_NETWORK_CONTROLLER_TOKEN}," "system:arktos-network-controller,uid:system:arktos-network-controller"
+  fi
   if [[ -n "${KUBE_PROXY_TOKEN:-}" ]]; then
     append_or_replace_prefixed_line "${known_tokens_csv}" "${KUBE_PROXY_TOKEN},"              "system:kube-proxy,uid:kube_proxy"
   fi
@@ -2353,6 +2356,10 @@ function start-kube-controller-manager {
     params+=" --controllers=${RUN_CONTROLLERS}"
   fi
 
+  local -r src_dir="${KUBE_HOME}/kube-manifests/kubernetes/gci-trusty"
+  local -r network_json="${src_dir}/default_mizar_network.json"
+  cp "${network_json}" /etc/srv/kubernetes/
+  params+=" --default-network-template-path=/etc/srv/kubernetes/default_mizar_network.json"
   if [[ "${KUBERNETES_RESOURCE_PARTITION:-false}" == "true" ]]; then
     # copy over the configfiles from ${KUBE_HOME}/tp-kubeconfigs
     sudo mkdir /etc/srv/kubernetes/tp-kubeconfigs
@@ -2543,6 +2550,50 @@ function start-cluster-autoscaler {
   fi
 }
 
+
+function start-arktos-network-controller {
+  mkdir -p /etc/srv/kubernetes/arktos-network-controller
+  echo "Start arktos-network-controller"
+  local master_ip=${1:-}  #optional
+  if [[ "${USE_INSECURE_SCALEOUT_CLUSTER_MODE:-false}" == "true" ]]; then
+    create-kubeconfig "arktos-network-controller" ${ARKTOS_NETWORK_CONTROLLER_TOKEN} ${master_ip} "8080" "http"
+  else
+    create-kubeconfig "arktos-network-controller" ${ARKTOS_NETWORK_CONTROLLER_TOKEN} ${master_ip}
+  fi
+  if [[ -f "${KUBE_HOME}/controllerconfig.json" ]]; then
+    cp ${KUBE_HOME}/controllerconfig.json /etc/srv/kubernetes/arktos-network-controller/
+  fi
+  prepare-log-file /var/log/arktos-network-controller.log
+  # Calculate variables and assemble the command line.
+  local params="${ARKTOS_NETWORK_CONTROLLER_TEST_LOG_LEVEL:-"--v=4"}"
+  params+=" --kube-apiserver-ip=${master_ip}"
+  params+=" --kubeconfig=/etc/srv/kubernetes/arktos-network-controller/kubeconfig"
+  params+=" --kube-apiserver-port=443"
+
+  local -r kube_rc_docker_tag=$(cat /home/kubernetes/kube-docker-files/arktos-network-controller.docker_tag)
+  local container_env=""
+  if [[ -n "${ENABLE_CACHE_MUTATION_DETECTOR:-}" ]]; then
+    container_env="\"env\":[{\"name\": \"KUBE_CACHE_MUTATION_DETECTOR\", \"value\": \"${ENABLE_CACHE_MUTATION_DETECTOR}\"}],"
+  fi
+
+  local -r src_file="${KUBE_HOME}/kube-manifests/kubernetes/gci-trusty/arktos-network-controller.manifest"
+  # Evaluate variables.
+  sed -i -e "s@{{pillar\['kube_docker_registry'\]}}@${DOCKER_REGISTRY}@g" "${src_file}"
+  sed -i -e "s@{{pillar\['arktos-network-controller_docker_tag'\]}}@${kube_rc_docker_tag}@g" "${src_file}"
+  sed -i -e "s@{{params}}@${params}@g" "${src_file}"
+  sed -i -e "s@{{container_env}}@${container_env}@g" ${src_file}
+  sed -i -e "s@{{cloud_config_mount}}@${CLOUD_CONFIG_MOUNT}@g" "${src_file}"
+  sed -i -e "s@{{cloud_config_volume}}@${CLOUD_CONFIG_VOLUME}@g" "${src_file}"
+  sed -i -e "s@{{additional_cloud_config_mount}}@@g" "${src_file}"
+  sed -i -e "s@{{additional_cloud_config_volume}}@@g" "${src_file}"
+  sed -i -e "s@{{pv_recycler_mount}}@${PV_RECYCLER_MOUNT}@g" "${src_file}"
+  sed -i -e "s@{{pv_recycler_volume}}@${PV_RECYCLER_VOLUME}@g" "${src_file}"
+  sed -i -e "s@{{flexvolume_hostpath_mount}}@${FLEXVOLUME_HOSTPATH_MOUNT}@g" "${src_file}"
+  sed -i -e "s@{{flexvolume_hostpath}}@${FLEXVOLUME_HOSTPATH_VOLUME}@g" "${src_file}"
+  sed -i -e "s@{{cpurequest}}@${ARKTOS_NETWORK_CONTROLLER_CPU_REQUEST}@g" "${src_file}"
+
+  cp "${src_file}" /etc/kubernetes/manifests
+}
 # A helper function for setting up addon manifests.
 #
 # $1: addon category under /etc/kubernetes

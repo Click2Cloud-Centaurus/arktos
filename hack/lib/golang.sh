@@ -70,6 +70,7 @@ kube::golang::server_targets() {
     cmd/kube-controller-manager
     cmd/cloud-controller-manager
     cmd/workload-controller-manager
+    cmd/arktos-network-controller
     cmd/kubelet
     cmd/kubeadm
     cmd/hyperkube
@@ -92,6 +93,7 @@ kube::golang::server_image_targets() {
     cmd/kube-apiserver
     cmd/kube-controller-manager
     cmd/workload-controller-manager
+    cmd/arktos-network-controller
     cmd/kube-scheduler
     cmd/kube-proxy
   )

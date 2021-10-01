@@ -41,6 +41,7 @@ function main() {
   KUBE_CONTROLLER_MANAGER_CPU_REQUEST="${KUBE_CONTROLLER_MANAGER_CPU_REQUEST:-200m}"
   WORKLOAD_CONTROLLER_MANAGER_CPU_REQUEST="${WORKLOAD_CONTROLLER_MANAGER_CPU_REQUEST:-200m}"
   KUBE_SCHEDULER_CPU_REQUEST="${KUBE_SCHEDULER_CPU_REQUEST:-75m}"
+  ARKTOS_NETWORK_CONTROLLER_CPU_REQUEST="${ARKTOS_NETWORK_CONTROLLER_CPU_REQUEST:-200m}"
 
   # Use --retry-connrefused opt only if it's supported by curl.
   CURL_RETRY_CONNREFUSED=""
@@ -144,6 +145,7 @@ function main() {
     update-legacy-addon-node-labels &
     apply-encryption-config &
     start-cluster-networking   ####start cluster networking if not using default kubenet
+    start-arktos-network-controller ${KUBERNETES_MASTER_NAME}
 
   else
     if [[ "${KUBE_PROXY_DAEMONSET:-}" != "true" ]]; then
