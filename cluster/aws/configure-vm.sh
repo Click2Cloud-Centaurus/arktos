@@ -562,6 +562,9 @@ function create-master-auth {
   if [[ -n "${WORKLOAD_CONTROLLER_MANAGER_TOKEN:-}" ]]; then
     append_or_replace_prefixed_line "${known_tokens_csv}" "${WORKLOAD_CONTROLLER_MANAGER_TOKEN}," "system:workload-controller-manager,uid:system:workload-controller-manager"
   fi
+  if [[ -n "${ARKTOS_NETWORK_CONTROLLER_TOKEN:-}" ]]; then
+    append_or_replace_prefixed_line "${known_tokens_csv}" "${ARKTOS_NETWORK_CONTROLLER_TOKEN}," "system:arktos-network-controller,uid:system:arktos-network-controller"
+  fi
   if [[ -n "${KUBE_CLUSTER_AUTOSCALER_TOKEN:-}" ]]; then
     append_or_replace_prefixed_line "${known_tokens_csv}" "${KUBE_CLUSTER_AUTOSCALER_TOKEN}," "cluster-autoscaler,uid:cluster-autoscaler"
   fi
@@ -631,6 +634,54 @@ function start-workload-controller-manager {
   mkdir -p /etc/srv/kubernetes/workload-controller-manager
   cp /var/cache/kubernetes-install/workload-controllerconfig.json /etc/srv/kubernetes/workload-controller-manager/
   create-kubeconfig "workload-controller-manager" ${WORKLOAD_CONTROLLER_MANAGER_TOKEN:-""}
+  prepare-log-file /var/log/workload-controller-manager.log
+  # Calculate variables and assemble the command line.
+  local params="${WORKLOAD_CONTROLLER_MANAGER_TEST_LOG_LEVEL:-"--v=2"}"
+  params+=" --controllerconfig=/etc/srv/kubernetes/workload-controller-manager/workload-controllerconfig.json"
+  params+=" --kubeconfig=/etc/srv/kubernetes/workload-controller-manager/kubeconfig"
+
+  # Disable using HPA metrics REST clients if metrics-server isn't enabled,
+  # or if we want to explicitly disable it by setting HPA_USE_REST_CLIENT.
+
+  local -r kube_rc_docker_tag=$(cat ${INSTALL_DIR}/kubernetes/server/bin/workload-controller-manager.docker_tag)
+  local container_env=""
+  if [[ -n "${ENABLE_CACHE_MUTATION_DETECTOR:-}" ]]; then
+    container_env="\"env\":[{\"name\": \"KUBE_CACHE_MUTATION_DETECTOR\", \"value\": \"${ENABLE_CACHE_MUTATION_DETECTOR}\"}],"
+  fi
+
+  local -r src_file="/var/cache/kubernetes-install/workload-controller-manager.manifest"
+  # Evaluate variables.
+  sed -i -e "s@{{pillar\['kube_docker_registry'\]}}@${DOCKER_REGISTRY}@g" "${src_file}"
+  sed -i -e "s@{{pillar\['workload-controller-manager_docker_tag'\]}}@${kube_rc_docker_tag}@g" "${src_file}"
+  sed -i -e "s@{{params}}@${params}@g" "${src_file}"
+  sed -i -e "s@{{container_env}}@${container_env}@g" ${src_file}
+  sed -i -e "s@{{cloud_config_mount}}@${CLOUD_CONFIG_MOUNT}@g" "${src_file}"
+  sed -i -e "s@{{cloud_config_volume}}@${CLOUD_CONFIG_VOLUME}@g" "${src_file}"
+  sed -i -e "s@{{additional_cloud_config_mount}}@@g" "${src_file}"
+  sed -i -e "s@{{additional_cloud_config_volume}}@@g" "${src_file}"
+  sed -i -e "s@{{pv_recycler_mount}}@${PV_RECYCLER_MOUNT}@g" "${src_file}"
+  sed -i -e "s@{{pv_recycler_volume}}@${PV_RECYCLER_VOLUME}@g" "${src_file}"
+  sed -i -e "s@{{flexvolume_hostpath_mount}}@${FLEXVOLUME_HOSTPATH_MOUNT}@g" "${src_file}"
+  sed -i -e "s@{{flexvolume_hostpath}}@${FLEXVOLUME_HOSTPATH_VOLUME}@g" "${src_file}"
+  sed -i -e "s@{{cpurequest}}@${WORKLOAD_CONTROLLER_MANAGER_CPU_REQUEST}@g" "${src_file}"
+
+  cp "${src_file}" /etc/kubernetes/manifests
+}
+
+function start-arktos-network-controller {
+  CLOUD_CONFIG_MOUNT=""
+  CLOUD_CONFIG_VOLUME=""
+  PV_RECYCLER_MOUNT=""
+  PV_RECYCLER_VOLUME=""
+  FLEXVOLUME_HOSTPATH_MOUNT=""
+  FLEXVOLUME_HOSTPATH_VOLUME=""
+  DOCKER_REGISTRY="k8s.gcr.io"
+  arktos-network-controller_CPU_REQUEST="${ARKTOS_NETWORK_CONTROLLER_CPU_REQUEST:-200m}"
+
+  echo "Startingarktos-network-controller .."
+  mkdir -p /etc/srv/kubernetes/arktos-network-controller
+#  cp /var/cache/kubernetes-install/workload-controllerconfig.json /etc/srv/kubernetes/arktos-network-controller/
+  create-kubeconfig "arktos-network-controller" ${WORKLOAD_CONTROLLER_MANAGER_TOKEN:-""}
   prepare-log-file /var/log/workload-controller-manager.log
   # Calculate variables and assemble the command line.
   local params="${WORKLOAD_CONTROLLER_MANAGER_TEST_LOG_LEVEL:-"--v=2"}"
