@@ -515,7 +515,7 @@ if [[ "${START_MODE}" != "kubeletonly" ]]; then
     kube::common::start_apiserver $i
   done
   #remove workload controller manager cluster role and rolebinding applying per this already be added to bootstrappolicy
-  
+
   # If there are other resources ready to sync thru workload-controller-mananger, please add them to the following clusterrole file
   #cluster/kubectl.sh create -f hack/runtime/workload-controller-manager-clusterrole.yaml
 
@@ -561,7 +561,6 @@ fi
 # Applying mizar cni
 if [[ "${CNIPLUGIN}" == "mizar" ]]; then
   ${KUBECTL} --kubeconfig="${CERT_DIR}/admin.kubeconfig" apply -f https://raw.githubusercontent.com/CentaurusInfra/mizar/dev-next/etc/deploy/deploy.mizar.yaml
-  kube::common::start_arktos_network_ontroller
 fi
 
 if [[ -n "${PSP_ADMISSION}" && "${AUTHORIZATION_MODE}" = *RBAC* ]]; then
