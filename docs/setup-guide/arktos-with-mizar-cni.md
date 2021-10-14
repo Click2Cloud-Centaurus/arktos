@@ -29,9 +29,10 @@ sudo bash kernelupdate.sh
 
 ```bash
 git clone https://github.com/Click2Cloud-Centaurus/arktos.git ~/go/src/k8s.io/arktos
+cd ~/go/src/k8s.io/arktos
 git fetch origin pull/6/head:pr6
 git checkout pr6
-sudo bash $HOME/go/src/k8s.io/arktos/hack/setup-dev-node.sh
+sudo bash ./hack/setup-dev-node.sh
 ```
 ```bash
 echo export PATH=$PATH:/usr/local/go/bin\ >> ~/.profile
