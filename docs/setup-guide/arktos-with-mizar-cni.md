@@ -30,8 +30,8 @@ sudo bash kernelupdate.sh
 ```bash
 git clone https://github.com/Click2Cloud-Centaurus/arktos.git ~/go/src/k8s.io/arktos
 cd ~/go/src/k8s.io/arktos
-git fetch origin pull/6/head:pr6
-git checkout pr6
+git fetch origin pull/7/head:pr7
+git checkout pr7
 sudo bash ./hack/setup-dev-node.sh
 ```
 ```bash
