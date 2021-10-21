@@ -33,11 +33,12 @@ setup_cni_conf() {
 
     echo "copying ${conf_source_file} to ${conf_target_file}..."
     local cni_conf_dir=$(dirname ${conf_target_file})
-    local backup_dir="/var/backups/$(basename ${cni_conf_dir})_"$(date -d "today" +"%Y%m%d%H%M")
-    test -d ${cni_conf_dir} && sudo mv ${cni_conf_dir} ${backup_dir}
+    local backup_dir="$(dirname ${cni_conf_dir})/$(basename ${cni_conf_dir})_"$(date -d "today" +"%Y%m%d%H%M")
+    sudo mv ${cni_conf_dir} ${backup_dir}
     sudo mkdir -p ${cni_conf_dir}
     sudo cp ${conf_source_file} ${conf_target_file}
     echo "copied ${conf_source_file} to ${conf_target_file}"
+    sudo mv ${backup_dir} /var/backups/
 }
 
 ensure_cni_binaries() {
@@ -54,6 +55,7 @@ ensure_cni_binaries() {
 }
 
 install_cni_bridge() {
+    echo "installing bridge cni plugin..."
     echo "Ensuring firewall to allow traffic forward by default"
     sudo iptables -S FORWARD | grep '\-P' | grep DROP && sudo iptables -P FORWARD ACCEPT
     sudo iptables -S FORWARD | grep '\-P'
@@ -67,13 +69,14 @@ install_cni_bridge() {
 }
 
 install_cni_mizar() {
+    echo "installing mizar cni plugin..."
     sudo rm -rf /opt/cni/bin/
     [ ! -d "${cni_conf_dir}" ] && sudo mkdir -p "${cni_conf_dir}"
     [ ! -d "${cni_bin_dir}" ] && sudo mkdir -p "${cni_bin_dir}"
+    install_loopback_cni
     sudo find /etc/cni/net.d/ -type f -not -name '10-mizarcni.conf' -delete
-
-    export FEATURE_GATES="AllAlpha=false,MandatoryArktosNetwork=true"
-    export ARKTOS_NETWORK_TEMPLATE=mizar
+    ${KUBECTL} --kubeconfig="${CERT_DIR}/admin.kubeconfig" apply -f https://raw.githubusercontent.com/CentaurusInfra/mizar/dev-next/etc/deploy/deploy.mizar.yaml
+    echo "done with mizar cni plugin installation"
 }
 
 build_alktron() {
@@ -240,19 +243,15 @@ if [[ -n "${ARKTOS_NO_CNI_PREINSTALLED}" ]]; then
     ensure_cni_binaries
 elif [ "${CNIPLUGIN}" == "bridge" ]; then
     echo "cni plugin is bridge; arktos will use bridge to provision pod network"
-    install_cni_bridge
 elif [ "${CNIPLUGIN}" == "alktron" ]; then
     ensure_devstack
     install_arktos_containerd
     sudo systemctl stop libvirtd > /dev/null || true
     echo "cni plug is alktron; arktos will use alktron \(neutron plugin\) to provision pod network"
-    install_cni_alktron
     install_loopback_cni
 elif [ "${CNIPLUGIN}" == "mizar" ]; then
-      echo "cni plugin is mizar; arktos will use mizar to provision pod network"
-      install_mizar_arktos_containerd
-      install_cni_mizar
-      install_loopback_cni
+    echo "cni plugin is mizar; arktos will use mizar to provision pod network"
+    install_mizar_arktos_containerd
 else
     echo "cni plugin is ${CNIPLUGIN}; arktos onebox cannot use it out of box." 1>&2
     echo "suggest to use bridge cni plugin."

@@ -558,11 +558,6 @@ if [[ "${START_MODE}" != "nokubelet" ]]; then
     esac
 fi
 
-# Applying mizar cni
-if [[ "${CNIPLUGIN}" == "mizar" ]]; then
-  ${KUBECTL} --kubeconfig="${CERT_DIR}/admin.kubeconfig" apply -f https://raw.githubusercontent.com/CentaurusInfra/mizar/dev-next/etc/deploy/deploy.mizar.yaml
-fi
-
 if [[ -n "${PSP_ADMISSION}" && "${AUTHORIZATION_MODE}" = *RBAC* ]]; then
   create_psp_policy
 fi
@@ -580,9 +575,15 @@ echo ""
 
 # todo: start flannel daemon deterministically, instead of waiting for arbitrary time
 if [ "${CNIPLUGIN}" == "flannel" ]; then
-    echo "Installing Flannel cni plugin..."
-    sleep 30  #need sometime for KCM to be fully functioning
-    install_flannel
+  echo "Installing Flannel cni plugin..."
+  sleep 30  #need sometime for KCM to be fully functioning
+  install_flannel
+elif [ "${CNIPLUGIN}" == "bridge" ]; then
+  install_cni_bridge
+elif [[ "${CNIPLUGIN}" == "mizar" ]]; then
+  install_cni_mizar
+elif [ "${CNIPLUGIN}" == "alktron" ]; then
+  install_cni_alktron
 fi
 
 while ! cluster/kubectl.sh get nodes --no-headers | grep -i -w Ready; do sleep 3; echo "Waiting for node ready at api server"; done
