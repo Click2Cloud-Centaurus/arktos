@@ -2358,13 +2358,13 @@ function start-kube-controller-manager {
 
   local -r src_dir="${KUBE_HOME}/kube-manifests/kubernetes/gci-trusty"
   if [[ "${NETWORK_POLICY_PROVIDER:-"flannel"}" == "mizar" ]]; then
-    local -r network_json="${src_dir}/default_flat_network.json"
-    cp "${network_json}" /etc/srv/kubernetes/
-    params+=" --default-network-template-path=/etc/srv/kubernetes/default_flat_network.json"
-  else
     local -r network_json="${src_dir}/default_mizar_network.json"
     cp "${network_json}" /etc/srv/kubernetes/
     params+=" --default-network-template-path=/etc/srv/kubernetes/default_mizar_network.json"
+  else
+    local -r network_json="${src_dir}/default_flat_network.json"
+    cp "${network_json}" /etc/srv/kubernetes/
+    params+=" --default-network-template-path=/etc/srv/kubernetes/default_flat_network.json"
   fi
 
   if [[ "${KUBERNETES_RESOURCE_PARTITION:-false}" == "true" ]]; then
