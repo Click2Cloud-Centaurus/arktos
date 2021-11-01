@@ -403,9 +403,6 @@ function install-cni-binaries {
   local -r cni_dir="${KUBE_HOME}/cni"
   mkdir -p "${cni_dir}/bin"
   tar xzf "${KUBE_HOME}/${cni_tar}" -C "${cni_dir}/bin" --overwrite
-  mv "${cni_dir}/bin"/* "${KUBE_BIN}"
-  rmdir "${cni_dir}/bin"
-  rm -f "${KUBE_HOME}/${cni_tar}"
   if [[ "${NETWORK_POLICY_PROVIDER:-"none"}" == "mizar" ]]; then
     mkdir -p /opt/cni/bin
     mv "${cni_dir}/bin"/* /opt/cni/bin/
